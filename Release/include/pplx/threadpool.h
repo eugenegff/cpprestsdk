@@ -17,7 +17,7 @@
 #pragma clang diagnostic ignored "-Wunreachable-code"
 #pragma clang diagnostic ignored "-Winfinite-recursion"
 #endif
-#include "boost/asio.hpp"
+#include "asio.hpp"
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
@@ -69,15 +69,15 @@ public:
     CASABLANCA_DEPRECATED("Use `.service().post(task)` directly.")
     void schedule(T task)
     {
-        service().post(task);
+        asio::post(service(), task);
     }
 
-    boost::asio::io_service& service() { return m_service; }
+    asio::io_context& service() { return m_service; }
 
 protected:
     threadpool(size_t num_threads) : m_service(static_cast<int>(num_threads)) {}
 
-    boost::asio::io_service m_service;
+    asio::io_context m_service;
 };
 
 } // namespace crossplat

@@ -50,16 +50,6 @@
 #include <signal.h>
 #include <stdint.h>
 #include <string>
-#if (defined(ANDROID) || defined(__ANDROID__)) && !defined(_LIBCPP_VERSION)
-// Boost doesn't recognize libstdcpp on top of clang correctly
-#include "boost/config.hpp"
-#include "boost/config/stdlib/libstdcpp3.hpp"
-#undef BOOST_NO_CXX11_SMART_PTR
-#undef BOOST_NO_CXX11_NULLPTR
-#endif
-#include "boost/bind/bind.hpp"
-#include "boost/thread/condition_variable.hpp"
-#include "boost/thread/mutex.hpp"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>

@@ -12,8 +12,10 @@
  ****/
 
 #include "stdafx.h"
+#include "cpprest/json.h"
 
 #include <cstdlib>
+#include <array>
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4127) // allow expressions like while(true) pass

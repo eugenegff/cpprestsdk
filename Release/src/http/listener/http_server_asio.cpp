@@ -14,9 +14,9 @@
 */
 #include "stdafx.h"
 
-#include <boost/algorithm/string/find.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/asio/read_until.hpp>
+//#include <boost/algorithm/string/find.hpp>
+//#include <boost/algorithm/string/predicate.hpp>
+#include <asio/read_until.hpp>
 #include <set>
 #include <sstream>
 
@@ -25,8 +25,8 @@
 #pragma clang diagnostic ignored "-Wconversion"
 #pragma clang diagnostic ignored "-Winfinite-recursion"
 #endif
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
+#include <asio.hpp>
+#include <asio/ssl.hpp>
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
@@ -42,8 +42,8 @@ using utility::conversions::details::to_string;
 using std::to_string;
 #endif
 
-using namespace boost::asio;
-using namespace boost::asio::ip;
+using namespace asio;
+using namespace asio::ip;
 
 #define CRLF std::string("\r\n")
 #define CRLFCRLF std::string("\r\n\r\n")
@@ -120,7 +120,7 @@ class hostport_listener
 {
 private:
     int m_backlog;
-    std::unique_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
+    std::unique_ptr<asio::ip::tcp::acceptor> m_acceptor;
     std::map<std::string, http_listener_impl*> m_listeners;
     pplx::extensibility::reader_writer_lock_t m_listeners_lock;
 
@@ -134,7 +134,7 @@ private:
     std::string m_port;
 
     bool m_is_https;
-    const std::function<void(boost::asio::ssl::context&)>& m_ssl_context_callback;
+    const std::function<void(asio::ssl::context&)>& m_ssl_context_callback;
 
 public:
     hostport_listener(http_linux_server* server,
@@ -193,7 +193,7 @@ public:
     }
 
 private:
-    void on_accept(std::unique_ptr<boost::asio::ip::tcp::socket> socket, const boost::system::error_code& ec);
+    void on_accept(std::unique_ptr<asio::ip::tcp::socket> socket, const std::error_code& ec);
 };
 
 } // namespace
@@ -306,11 +306,11 @@ class asio_server_connection
 {
 private:
     typedef void (asio_server_connection::*ResponseFuncPtr)(const http_response& response,
-                                                            const boost::system::error_code& ec);
+                                                            const std::error_code& ec);
 
-    std::unique_ptr<boost::asio::ip::tcp::socket> m_socket;
-    boost::asio::streambuf m_request_buf;
-    boost::asio::streambuf m_response_buf;
+    std::unique_ptr<asio::ip::tcp::socket> m_socket;
+    asio::streambuf m_request_buf;
+    asio::streambuf m_response_buf;
     http_linux_server* m_p_server;
     hostport_listener* m_p_parent;
     mutable std::mutex m_request_mtx;
@@ -334,12 +334,12 @@ private:
     bool m_chunked;
     std::atomic<int> m_refs; // track how many threads are still referring to this
 
-    using ssl_stream = boost::asio::ssl::stream<boost::asio::ip::tcp::socket&>;
+    using ssl_stream = asio::ssl::stream<asio::ip::tcp::socket&>;
 
-    std::unique_ptr<boost::asio::ssl::context> m_ssl_context;
+    std::unique_ptr<asio::ssl::context> m_ssl_context;
     std::unique_ptr<ssl_stream> m_ssl_stream;
 
-    asio_server_connection(std::unique_ptr<boost::asio::ip::tcp::socket> socket,
+    asio_server_connection(std::unique_ptr<asio::ip::tcp::socket> socket,
                            http_linux_server* server,
                            hostport_listener* parent)
         : m_socket(std::move(socket))
@@ -361,7 +361,7 @@ private:
 public:
     using refcount_ptr = std::unique_ptr<asio_server_connection, Dereferencer>;
 
-    static refcount_ptr create(std::unique_ptr<boost::asio::ip::tcp::socket> socket,
+    static refcount_ptr create(std::unique_ptr<asio::ip::tcp::socket> socket,
                                http_linux_server* server,
                                hostport_listener* parent)
     {
@@ -375,13 +375,13 @@ public:
     }
 
     will_erase_from_parent_t start_connection(
-        bool is_https, const std::function<void(boost::asio::ssl::context&)>& ssl_context_callback)
+        bool is_https, const std::function<void(asio::ssl::context&)>& ssl_context_callback)
     {
         auto unique_reference = this->get_reference();
 
         if (is_https)
         {
-            m_ssl_context = make_unique<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+            m_ssl_context = make_unique<asio::ssl::context>(asio::ssl::context::sslv23);
             if (ssl_context_callback)
             {
                 ssl_context_callback(*m_ssl_context);
@@ -389,8 +389,8 @@ public:
             m_ssl_stream = make_unique<ssl_stream>(*m_socket, *m_ssl_context);
 
             m_ssl_stream->async_handshake(
-                boost::asio::ssl::stream_base::server,
-                [this](const boost::system::error_code&) { (will_deref_and_erase_t) this->start_request_response(); });
+                asio::ssl::stream_base::server,
+                [this](const std::error_code&) { (will_deref_and_erase_t) this->start_request_response(); });
             unique_reference.release();
             return will_erase_from_parent_t {};
         }
@@ -411,11 +411,11 @@ private:
     ~asio_server_connection() = default;
 
     will_deref_and_erase_t start_request_response();
-    will_deref_and_erase_t handle_http_line(const boost::system::error_code& ec);
+    will_deref_and_erase_t handle_http_line(const std::error_code& ec);
     will_deref_and_erase_t handle_headers();
-    will_deref_t handle_body(const boost::system::error_code& ec);
-    will_deref_t handle_chunked_header(const boost::system::error_code& ec);
-    will_deref_t handle_chunked_body(const boost::system::error_code& ec, int toWrite);
+    will_deref_t handle_body(const std::error_code& ec);
+    will_deref_t handle_chunked_header(const std::error_code& ec);
+    will_deref_t handle_chunked_body(const std::error_code& ec, int toWrite);
     will_deref_and_erase_t dispatch_request_to_listener();
     will_erase_from_parent_t do_response()
     {
@@ -469,12 +469,12 @@ private:
     void async_read_until_buffersize(size_t size, const ReadHandler& handler);
     void serialize_headers(http_response response);
     will_deref_and_erase_t cancel_sending_response_with_error(const http_response& response, const std::exception_ptr&);
-    will_deref_and_erase_t handle_headers_written(const http_response& response, const boost::system::error_code& ec);
+    will_deref_and_erase_t handle_headers_written(const http_response& response, const std::error_code& ec);
     will_deref_and_erase_t handle_write_large_response(const http_response& response,
-                                                       const boost::system::error_code& ec);
+                                                       const std::error_code& ec);
     will_deref_and_erase_t handle_write_chunked_response(const http_response& response,
-                                                         const boost::system::error_code& ec);
-    will_deref_and_erase_t handle_response_written(const http_response& response, const boost::system::error_code& ec);
+                                                         const std::error_code& ec);
+    will_deref_and_erase_t handle_response_written(const http_response& response, const std::error_code& ec);
     will_deref_and_erase_t finish_request_response();
 
     using WriteFunc = decltype(&asio_server_connection::handle_headers_written);
@@ -489,16 +489,16 @@ private:
 
 } // namespace
 
-namespace boost
-{
+// namespace boost
+// {
 namespace asio
 {
 template<>
-struct is_match_condition<crlfcrlf_nonascii_searcher_t> : public boost::true_type
+struct is_match_condition<crlfcrlf_nonascii_searcher_t> : public std::true_type
 {
 };
 } // namespace asio
-} // namespace boost
+// } // namespace boost
 
 namespace
 {
@@ -520,21 +520,28 @@ void hostport_listener::start()
     auto& service = crossplat::threadpool::shared_instance().service();
     tcp::resolver resolver(service);
     // #446: boost resolver does not recognize "+" as a host wildchar
+#if 0
     tcp::resolver::query query =
-        ("+" == m_host) ? tcp::resolver::query(m_port, boost::asio::ip::resolver_query_base::flags())
-                        : tcp::resolver::query(m_host, m_port, boost::asio::ip::resolver_query_base::flags());
+        ("+" == m_host) ? tcp::resolver::query(m_port, asio::ip::resolver_query_base::flags())
+                        : tcp::resolver::query(m_host, m_port, asio::ip::resolver_query_base::flags());
 
     tcp::endpoint endpoint = *resolver.resolve(query);
+#else
+    auto endpoints = resolver.resolve(m_host, m_port);
+    if (endpoints.empty())
+        throw http_exception("Can not resolve address");
 
+    tcp::endpoint endpoint = *endpoints.cbegin();
+#endif
     m_acceptor.reset(new tcp::acceptor(service));
     m_acceptor->open(endpoint.protocol());
     m_acceptor->set_option(socket_base::reuse_address(true));
     m_acceptor->bind(endpoint);
-    m_acceptor->listen(0 != m_backlog ? m_backlog : socket_base::max_connections);
+    m_acceptor->listen(0 != m_backlog ? m_backlog : socket_base::max_listen_connections);
 
     auto socket = new ip::tcp::socket(service);
     std::unique_ptr<ip::tcp::socket> usocket(socket);
-    m_acceptor->async_accept(*socket, [this, socket](const boost::system::error_code& ec) {
+    m_acceptor->async_accept(*socket, [this, socket](const std::error_code& ec) {
         std::unique_ptr<ip::tcp::socket> usocket(socket);
         this->on_accept(std::move(usocket), ec);
     });
@@ -547,7 +554,7 @@ void asio_server_connection::close()
     auto sock = m_socket.get();
     if (sock != nullptr)
     {
-        boost::system::error_code ec;
+        std::error_code ec;
         sock->cancel(ec);
         sock->shutdown(tcp::socket::shutdown_both, ec);
         sock->close(ec);
@@ -563,27 +570,27 @@ will_deref_and_erase_t asio_server_connection::start_request_response()
 
     if (m_ssl_stream)
     {
-        boost::asio::async_read_until(
-            *m_ssl_stream, m_request_buf, CRLFCRLF, [this](const boost::system::error_code& ec, std::size_t) {
+        asio::async_read_until(
+            *m_ssl_stream, m_request_buf, CRLFCRLF, [this](const std::error_code& ec, std::size_t) {
                 (will_deref_and_erase_t) this->handle_http_line(ec);
             });
     }
     else
     {
-        boost::asio::async_read_until(*m_socket,
+        asio::async_read_until(*m_socket,
                                       m_request_buf,
                                       crlfcrlf_nonascii_searcher,
-                                      [this](const boost::system::error_code& ec, std::size_t) {
+                                      [this](const std::error_code& ec, std::size_t) {
                                           (will_deref_and_erase_t) this->handle_http_line(ec);
                                       });
     }
     return will_deref_and_erase_t {};
 }
 
-void hostport_listener::on_accept(std::unique_ptr<ip::tcp::socket> socket, const boost::system::error_code& ec)
+void hostport_listener::on_accept(std::unique_ptr<ip::tcp::socket> socket, const std::error_code& ec)
 {
     // Listener closed
-    if (ec == boost::asio::error::operation_aborted)
+    if (ec == asio::error::operation_aborted)
     {
         return;
     }
@@ -593,8 +600,8 @@ void hostport_listener::on_accept(std::unique_ptr<ip::tcp::socket> socket, const
     // Handle successful accept
     if (!ec)
     {
-        boost::asio::ip::tcp::no_delay option(true);
-        boost::system::error_code error_ignored;
+        asio::ip::tcp::no_delay option(true);
+        std::error_code error_ignored;
         socket->set_option(option, error_ignored);
 
         auto conn = asio_server_connection::create(std::move(socket), m_p_server, this);
@@ -609,7 +616,7 @@ void hostport_listener::on_accept(std::unique_ptr<ip::tcp::socket> socket, const
             // the following cannot throw
             if (m_connections.size() == 1) m_all_connections_complete.reset();
         }
-        catch (boost::system::system_error&)
+        catch (std::system_error&)
         {
             // boost ssl apis throw boost::system::system_error.
             // Exception indicates something went wrong setting ssl context.
@@ -623,7 +630,7 @@ void hostport_listener::on_accept(std::unique_ptr<ip::tcp::socket> socket, const
         // spin off another async accept
         auto newSocket = new ip::tcp::socket(crossplat::threadpool::shared_instance().service());
         std::unique_ptr<ip::tcp::socket> usocket(newSocket);
-        m_acceptor->async_accept(*newSocket, [this, newSocket](const boost::system::error_code& ec) {
+        m_acceptor->async_accept(*newSocket, [this, newSocket](const std::error_code& ec) {
             std::unique_ptr<ip::tcp::socket> usocket(newSocket);
             this->on_accept(std::move(usocket), ec);
         });
@@ -631,18 +638,18 @@ void hostport_listener::on_accept(std::unique_ptr<ip::tcp::socket> socket, const
     }
 }
 
-will_deref_and_erase_t asio_server_connection::handle_http_line(const boost::system::error_code& ec)
+will_deref_and_erase_t asio_server_connection::handle_http_line(const std::error_code& ec)
 {
     auto thisRequest = http_request::_create_request(make_unique<linux_request_context>());
     set_request(thisRequest);
     if (ec)
     {
         // client closed connection
-        if (ec == boost::asio::error::eof || // peer has performed an orderly shutdown
+        if (ec == asio::error::eof || // peer has performed an orderly shutdown
             ec ==
-                boost::asio::error::operation_aborted ||  // this can be removed. ECONNABORTED happens only for accept()
-            ec == boost::asio::error::connection_reset || // connection reset by peer
-            ec == boost::asio::error::timed_out           // connection timed out
+                asio::error::operation_aborted ||  // this can be removed. ECONNABORTED happens only for accept()
+            ec == asio::error::connection_reset || // connection reset by peer
+            ec == asio::error::timed_out           // connection timed out
         )
         {
             return finish_request_response();
@@ -747,7 +754,7 @@ will_deref_and_erase_t asio_server_connection::handle_http_line(const boost::sys
         }
 
         // Get the remote IP address
-        boost::system::error_code socket_ec;
+        std::error_code socket_ec;
         auto endpoint = m_socket->remote_endpoint(socket_ec);
         if (!socket_ec)
         {
@@ -833,13 +840,13 @@ will_deref_and_erase_t asio_server_connection::handle_headers()
         ++m_refs;
         async_read_until_buffersize(
             (std::min)(ChunkSize, m_read_size),
-            [this](const boost::system::error_code& ec, size_t) { (will_deref_t) this->handle_body(ec); });
+            [this](const std::error_code& ec, size_t) { (will_deref_t) this->handle_body(ec); });
     }
 
     return dispatch_request_to_listener();
 }
 
-will_deref_t asio_server_connection::handle_chunked_header(const boost::system::error_code& ec)
+will_deref_t asio_server_connection::handle_chunked_header(const std::error_code& ec)
 {
     auto requestImpl = get_request()._get_impl();
     if (ec)
@@ -862,7 +869,7 @@ will_deref_t asio_server_connection::handle_chunked_header(const boost::system::
         }
         else
         {
-            async_read_until_buffersize(len + 2, [this, len](const boost::system::error_code& ec, size_t) {
+            async_read_until_buffersize(len + 2, [this, len](const std::error_code& ec, size_t) {
                 (will_deref_t) this->handle_chunked_body(ec, len);
             });
             return will_deref_t {};
@@ -870,7 +877,7 @@ will_deref_t asio_server_connection::handle_chunked_header(const boost::system::
     }
 }
 
-will_deref_t asio_server_connection::handle_chunked_body(const boost::system::error_code& ec, int toWrite)
+will_deref_t asio_server_connection::handle_chunked_body(const std::error_code& ec, int toWrite)
 {
     auto requestImpl = get_request()._get_impl();
     if (ec)
@@ -881,7 +888,7 @@ will_deref_t asio_server_connection::handle_chunked_body(const boost::system::er
     else
     {
         auto writebuf = requestImpl->outstream().streambuf();
-        writebuf.putn_nocopy(buffer_cast<const uint8_t*>(m_request_buf.data()), toWrite)
+        writebuf.putn_nocopy(static_cast<const uint8_t*>(m_request_buf.data().data()), toWrite)
             .then([=](pplx::task<size_t> writeChunkTask) -> will_deref_t {
                 try
                 {
@@ -900,7 +907,7 @@ will_deref_t asio_server_connection::handle_chunked_body(const boost::system::er
     }
 }
 
-will_deref_t asio_server_connection::handle_body(const boost::system::error_code& ec)
+will_deref_t asio_server_connection::handle_body(const std::error_code& ec)
 {
     auto requestImpl = get_request()._get_impl();
     // read body
@@ -913,7 +920,7 @@ will_deref_t asio_server_connection::handle_body(const boost::system::error_code
     {
         auto writebuf = requestImpl->outstream().streambuf();
         writebuf
-            .putn_nocopy(boost::asio::buffer_cast<const uint8_t*>(m_request_buf.data()),
+            .putn_nocopy(static_cast<const uint8_t*>(m_request_buf.data().data()),
                          (std::min)(m_request_buf.size(), m_read_size - m_read))
             .then([this](pplx::task<size_t> writtenSizeTask) -> will_deref_t {
                 size_t writtenSize = 0;
@@ -931,7 +938,7 @@ will_deref_t asio_server_connection::handle_body(const boost::system::error_code
 
                 async_read_until_buffersize(
                     (std::min)(ChunkSize, m_read_size - m_read),
-                    [this](const boost::system::error_code& ec, size_t) { (will_deref_t) this->handle_body(ec); });
+                    [this](const std::error_code& ec, size_t) { (will_deref_t) this->handle_body(ec); });
                 return will_deref_t {};
             });
         return will_deref_t {};
@@ -947,13 +954,13 @@ will_deref_and_erase_t asio_server_connection::async_write(WriteFunc response_fu
 {
     if (m_ssl_stream)
     {
-        boost::asio::async_write(*m_ssl_stream, m_response_buf, [=](const boost::system::error_code& ec, std::size_t) {
+        asio::async_write(*m_ssl_stream, m_response_buf, [=](const std::error_code& ec, std::size_t) {
             (this->*response_func_ptr)(response, ec);
         });
     }
     else
     {
-        boost::asio::async_write(*m_socket, m_response_buf, [=](const boost::system::error_code& ec, std::size_t) {
+        asio::async_write(*m_socket, m_response_buf, [=](const std::error_code& ec, std::size_t) {
             (this->*response_func_ptr)(response, ec);
         });
     }
@@ -964,15 +971,15 @@ will_deref_t asio_server_connection::async_handle_chunked_header()
 {
     if (m_ssl_stream)
     {
-        boost::asio::async_read_until(
-            *m_ssl_stream, m_request_buf, CRLF, [this](const boost::system::error_code& ec, size_t) {
+        asio::async_read_until(
+            *m_ssl_stream, m_request_buf, CRLF, [this](const std::error_code& ec, size_t) {
                 (will_deref_t) this->handle_chunked_header(ec);
             });
     }
     else
     {
-        boost::asio::async_read_until(
-            *m_socket, m_request_buf, CRLF, [this](const boost::system::error_code& ec, size_t) {
+        asio::async_read_until(
+            *m_socket, m_request_buf, CRLF, [this](const std::error_code& ec, size_t) {
                 (will_deref_t) this->handle_chunked_header(ec);
             });
     }
@@ -994,11 +1001,11 @@ void asio_server_connection::async_read_until_buffersize(size_t size, const Read
 
     if (m_ssl_stream)
     {
-        boost::asio::async_read(*m_ssl_stream, m_request_buf, condition, handler);
+        asio::async_read(*m_ssl_stream, m_request_buf, condition, handler);
     }
     else
     {
-        boost::asio::async_read(*m_socket, m_request_buf, condition, handler);
+        asio::async_read(*m_socket, m_request_buf, condition, handler);
     }
 }
 
@@ -1119,7 +1126,7 @@ will_deref_and_erase_t asio_server_connection::cancel_sending_response_with_erro
 }
 
 will_deref_and_erase_t asio_server_connection::handle_write_chunked_response(const http_response& response,
-                                                                             const boost::system::error_code& ec)
+                                                                             const std::error_code& ec)
 {
     if (ec)
     {
@@ -1134,7 +1141,7 @@ will_deref_and_erase_t asio_server_connection::handle_write_chunked_response(con
     }
     auto membuf = m_response_buf.prepare(ChunkSize + chunked_encoding::additional_encoding_space);
 
-    readbuf.getn(buffer_cast<uint8_t*>(membuf) + chunked_encoding::data_offset, ChunkSize)
+    readbuf.getn(static_cast<uint8_t*>(membuf.data()) + chunked_encoding::data_offset, ChunkSize)
         .then([=](pplx::task<size_t> actualSizeTask) -> will_deref_and_erase_t {
             size_t actualSize = 0;
             try
@@ -1146,7 +1153,7 @@ will_deref_and_erase_t asio_server_connection::handle_write_chunked_response(con
                 return cancel_sending_response_with_error(response, std::current_exception());
             }
             size_t offset = chunked_encoding::add_chunked_delimiters(
-                buffer_cast<uint8_t*>(membuf), ChunkSize + chunked_encoding::additional_encoding_space, actualSize);
+                static_cast<uint8_t*>(membuf.data()), ChunkSize + chunked_encoding::additional_encoding_space, actualSize);
             m_response_buf.commit(actualSize + chunked_encoding::additional_encoding_space);
             m_response_buf.consume(offset);
             if (actualSize == 0)
@@ -1158,7 +1165,7 @@ will_deref_and_erase_t asio_server_connection::handle_write_chunked_response(con
 }
 
 will_deref_and_erase_t asio_server_connection::handle_write_large_response(const http_response& response,
-                                                                           const boost::system::error_code& ec)
+                                                                           const std::error_code& ec)
 {
     if (ec || m_write == m_write_size) return handle_response_written(response, ec);
 
@@ -1167,7 +1174,7 @@ will_deref_and_erase_t asio_server_connection::handle_write_large_response(const
         return cancel_sending_response_with_error(
             response, std::make_exception_ptr(http_exception("Response stream close early!")));
     size_t readBytes = (std::min)(ChunkSize, m_write_size - m_write);
-    readbuf.getn(buffer_cast<uint8_t*>(m_response_buf.prepare(readBytes)), readBytes)
+    readbuf.getn(static_cast<uint8_t*>(m_response_buf.prepare(readBytes).data()), readBytes)
         .then([=](pplx::task<size_t> actualSizeTask) -> will_deref_and_erase_t {
             size_t actualSize = 0;
             try
@@ -1186,7 +1193,7 @@ will_deref_and_erase_t asio_server_connection::handle_write_large_response(const
 }
 
 will_deref_and_erase_t asio_server_connection::handle_headers_written(const http_response& response,
-                                                                      const boost::system::error_code& ec)
+                                                                      const std::error_code& ec)
 {
     if (ec)
     {
@@ -1203,7 +1210,7 @@ will_deref_and_erase_t asio_server_connection::handle_headers_written(const http
 }
 
 will_deref_and_erase_t asio_server_connection::handle_response_written(const http_response& response,
-                                                                       const boost::system::error_code& ec)
+                                                                       const std::error_code& ec)
 {
     auto* context = static_cast<linux_request_context*>(response._get_server_context());
     if (ec)

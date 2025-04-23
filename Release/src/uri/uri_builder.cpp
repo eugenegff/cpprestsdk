@@ -12,6 +12,7 @@
  ****/
 
 #include "stdafx.h"
+#include "cpprest/uri_builder.h"
 
 static const utility::string_t oneSlash = _XPLATSTR("/");
 

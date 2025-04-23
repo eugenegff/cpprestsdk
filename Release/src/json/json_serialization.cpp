@@ -12,8 +12,10 @@
  ****/
 
 #include "stdafx.h"
+#include "cpprest/json.h"
 
 #include <stdio.h>
+#include <array>
 
 #ifndef _WIN32
 #ifndef __STDC_FORMAT_MACROS

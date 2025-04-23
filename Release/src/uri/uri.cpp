@@ -12,6 +12,7 @@
  ****/
 
 #include "stdafx.h"
+#include "cpprest/uri.h"
 
 #include <sstream>
 

@@ -72,6 +72,7 @@ struct Value2StringFormatter
     }
 };
 
+/*
 template<>
 struct Value2StringFormatter<uint8_t>
 {
@@ -88,6 +89,7 @@ struct Value2StringFormatter<uint8_t>
         return format(utility::conversions::utf16_to_utf8(val));
     }
 };
+ */
 
 static const char* _in_stream_msg = "stream not set up for input of data";
 static const char* _in_streambuf_msg = "stream buffer not set up for input of data";
