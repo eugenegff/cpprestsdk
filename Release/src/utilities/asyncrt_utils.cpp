@@ -19,7 +19,6 @@
 #include <string>
 #include <time.h>
 
-using namespace web;
 using namespace utility;
 using namespace utility::conversions;
 

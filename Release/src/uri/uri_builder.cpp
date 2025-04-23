@@ -146,7 +146,7 @@ uri_builder& uri_builder::set_port(const utility::string_t& port)
     return *this;
 }
 
-uri_builder& uri_builder::append(const http::uri& relative_uri)
+uri_builder& uri_builder::append(const uri& relative_uri)
 {
     append_path(relative_uri.path());
     append_query(relative_uri.query());
