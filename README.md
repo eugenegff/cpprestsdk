@@ -1,4 +1,9 @@
-**cpprestsdk is in maintenance mode and we do not recommend its use in new projects. We will continue to fix critical bugs and address security issues.**
+## Goals of [this](https://github.com/eugenegff/cpprestsdk) fork
+Support PPLX and C++ REST SDK for [Live Home 3D](https://www.livehome3d.com) needs on all major platforms (Win, macOS, iOS, Android), till C++26 hopefully give us std::execution::then()
+### Changes:
+* Modernized to use Standalone Asio 1.32 (2024) rather than obsolete Boost.Asio 1.12 (2018). Asio is used for PPLX threadpool and networking on non Windows platforms
+### Plans:
+* Support Windows UWP C++/WinRT and WinUI3 C++/WinRT, in addition to currently supported Win32 and Windows UWP C++/CX
 
 ## Welcome!
 
