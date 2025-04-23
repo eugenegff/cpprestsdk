@@ -484,6 +484,11 @@ _ASYNCRTIMP bool __cdecl str_iless(const std::string& left, const std::string& r
 /// false.</returns>
 _ASYNCRTIMP bool __cdecl str_iless(const std::wstring& left, const std::wstring& right) CPPREST_NOEXCEPT;
 
+_ASYNCRTIMP bool __cdecl str_icontains(const std::wstring& left, const std::wstring& right) CPPREST_NOEXCEPT;
+_ASYNCRTIMP bool __cdecl str_icontains(const std::string& left, const std::string& right) CPPREST_NOEXCEPT;
+_ASYNCRTIMP void __cdecl inplace_trim(std::string& target) CPPREST_NOEXCEPT;
+_ASYNCRTIMP void __cdecl inplace_trim(std::wstring& target) CPPREST_NOEXCEPT;
+
 /// <summary>
 /// Convert a string to lowercase in place.
 /// </summary>

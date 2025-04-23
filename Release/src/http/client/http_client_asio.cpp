@@ -831,7 +831,7 @@ public:
             // Check user specified transfer-encoding.
             std::string transferencoding;
             if (ctx->m_request.headers().match(header_names::transfer_encoding, transferencoding) &&
-                boost::icontains(transferencoding, U("chunked")))
+                utility::details::str_icontains(transferencoding, U("chunked")))
             {
                 ctx->m_needChunked = true;
             }
@@ -1429,24 +1429,24 @@ private:
             {
                 auto name = header.substr(0, colon);
                 auto value = header.substr(colon + 1, header.size() - colon - 2);
-                boost::algorithm::trim(name);
-                boost::algorithm::trim(value);
+                utility::details::inplace_trim(name);
+                utility::details::inplace_trim(value);
 
-                if (boost::iequals(name, header_names::transfer_encoding))
+                if (utility::details::str_iequal(name, header_names::transfer_encoding))
                 {
-                    needChunked = boost::icontains(value, U("chunked"));
+                    needChunked = utility::details::str_icontains(value, U("chunked"));
                 }
 
-                if (boost::iequals(name, header_names::connection))
+                if (utility::details::str_iequal(name, header_names::connection))
                 {
                     // If the server uses HTTP/1.1, then 'Keep-Alive' is the default,
                     // so connection is explicitly closed only if we get "Connection: close".
                     // If the server uses HTTP/1.0, it would need to respond using
                     // 'Connection: Keep-Alive' every time.
                     if (m_response._get_impl()->http_version() != web::http::http_versions::HTTP_1_0)
-                        m_connection->set_keep_alive(!boost::iequals(value, U("close")));
+                        m_connection->set_keep_alive(!utility::details::str_iequal(value, U("close")));
                     else
-                        m_connection->set_keep_alive(boost::iequals(value, U("Keep-Alive")));
+                        m_connection->set_keep_alive(utility::details::str_iequal(value, U("Keep-Alive")));
                 }
 
                 m_response.headers().add(utility::conversions::to_string_t(std::move(name)),

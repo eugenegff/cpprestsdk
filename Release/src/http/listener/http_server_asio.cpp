@@ -76,7 +76,7 @@ struct iequal_to
 {
     bool operator()(const std::string& left, const std::string& right) const
     {
-        return boost::ilexicographical_compare(left, right);
+        return utility::details::str_iless(left, right);
     }
 };
 
@@ -674,21 +674,21 @@ will_deref_and_erase_t asio_server_connection::handle_http_line(const boost::sys
         }
 #endif
 
-        if (boost::iequals(http_verb, methods::GET))
+        if (utility::details::str_iequal(http_verb, methods::GET))
             http_verb = methods::GET;
-        else if (boost::iequals(http_verb, methods::POST))
+        else if (utility::details::str_iequal(http_verb, methods::POST))
             http_verb = methods::POST;
-        else if (boost::iequals(http_verb, methods::PUT))
+        else if (utility::details::str_iequal(http_verb, methods::PUT))
             http_verb = methods::PUT;
-        else if (boost::iequals(http_verb, methods::DEL))
+        else if (utility::details::str_iequal(http_verb, methods::DEL))
             http_verb = methods::DEL;
-        else if (boost::iequals(http_verb, methods::HEAD))
+        else if (utility::details::str_iequal(http_verb, methods::HEAD))
             http_verb = methods::HEAD;
-        else if (boost::iequals(http_verb, methods::TRCE))
+        else if (utility::details::str_iequal(http_verb, methods::TRCE))
             http_verb = methods::TRCE;
-        else if (boost::iequals(http_verb, methods::CONNECT))
+        else if (utility::details::str_iequal(http_verb, methods::CONNECT))
             http_verb = methods::CONNECT;
-        else if (boost::iequals(http_verb, methods::OPTIONS))
+        else if (utility::details::str_iequal(http_verb, methods::OPTIONS))
             http_verb = methods::OPTIONS;
 
         // Check to see if there is not allowed character on the input
@@ -778,7 +778,7 @@ will_deref_and_erase_t asio_server_connection::handle_headers()
             web::http::details::trim_whitespace(name);
             web::http::details::trim_whitespace(value);
 
-            if (boost::iequals(name, header_names::content_length))
+            if (utility::details::str_iequal(name, header_names::content_length))
             {
                 headers[header_names::content_length] = value;
             }
@@ -802,12 +802,12 @@ will_deref_and_erase_t asio_server_connection::handle_headers()
     // check if the client has requested we close the connection
     if (currentRequest.headers().match(header_names::connection, name))
     {
-        m_close = boost::iequals(name, U("close"));
+        m_close = utility::details::str_iequal(name, U("close"));
     }
 
     if (currentRequest.headers().match(header_names::transfer_encoding, name))
     {
-        m_chunked = boost::ifind_first(name, U("chunked"));
+        m_chunked = utility::details::str_icontains(name, U("chunked"));
     }
 
     currentRequest._get_impl()->_prepare_to_receive_data();
@@ -1095,9 +1095,9 @@ void asio_server_connection::serialize_headers(http_response response)
     for (const auto& header : response.headers())
     {
         // check if the responder has requested we close the connection
-        if (boost::iequals(header.first, U("connection")))
+        if (utility::details::str_iequal(header.first, U("connection")))
         {
-            if (boost::iequals(header.second, U("close")))
+            if (utility::details::str_iequal(header.second, U("close")))
             {
                 m_close = true;
             }

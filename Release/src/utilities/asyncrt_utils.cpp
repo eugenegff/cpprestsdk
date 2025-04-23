@@ -89,6 +89,28 @@ _ASYNCRTIMP bool __cdecl str_iless(const std::wstring& left, const std::wstring&
     return std::lexicographical_compare(left.cbegin(), left.cend(), right.cbegin(), right.cend(), lt_lower_ch);
 }
 
+_ASYNCRTIMP bool __cdecl str_icontains(const std::wstring& left, const std::wstring& right) CPPREST_NOEXCEPT
+{
+    return left.cend() != std::search(left.cbegin(), left.cend(), right.cbegin(), right.cend(), eq_lower_ch);
+}
+
+_ASYNCRTIMP bool __cdecl str_icontains(const std::string& left, const std::string& right) CPPREST_NOEXCEPT
+{
+    return left.cend() != std::search(left.cbegin(), left.cend(), right.cbegin(), right.cend(), eq_lower_ch);
+}
+
+_ASYNCRTIMP void __cdecl inplace_trim(std::string& s) CPPREST_NOEXCEPT
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !is_space(ch); }));
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !is_space(ch); }).base(), s.end());
+}
+
+_ASYNCRTIMP void __cdecl inplace_trim(std::wstring& s) CPPREST_NOEXCEPT
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !is_space(ch); }));
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !is_space(ch); }).base(), s.end());
+}
+
 _ASYNCRTIMP void __cdecl inplace_tolower(std::string& target) CPPREST_NOEXCEPT
 {
     for (auto& ch : target)
