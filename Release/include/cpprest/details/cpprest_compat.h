@@ -16,6 +16,13 @@
 
 #if defined(_WIN32)
 
+#if defined(WINAPI_FAMILY) && !defined(CPPREST_WINRT)
+#include <winapifamily.h>
+#if WINAPI_FAMILY == WINAPI_FAMILY_APP
+#define CPPREST_WINRT // Windows Store Application, C++/CX or C++/WinRT
+#endif
+#endif
+
 #if _MSC_VER >= 1900
 #define CPPREST_NOEXCEPT noexcept
 #define CPPREST_CONSTEXPR constexpr

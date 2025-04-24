@@ -15,12 +15,17 @@
 
 #include <assert.h>
 
-#if defined(_WIN32) && !defined(__cplusplus_winrt)
+#if defined(_WIN32) && !defined(CPPREST_WINRT)
 #include <Wincrypt.h>
 #endif
 
-#if defined(__cplusplus_winrt)
+#if defined(CPPREST_WINRT)
 #include <robuffer.h>
+#ifndef __cplusplus_winrt // C++/WinRT projection
+#include <pplawait.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Security.Cryptography.DataProtection.h>
+#endif
 #endif
 
 namespace web
@@ -29,9 +34,10 @@ namespace details
 {
 #ifdef _WIN32
 #if _WIN32_WINNT >= _WIN32_WINNT_VISTA
-#ifdef __cplusplus_winrt
+#ifdef CPPREST_WINRT
 
 // Helper function to zero out memory of an IBuffer.
+#ifdef __cplusplus_winrt // C++/CX projection
 void winrt_secure_zero_buffer(Windows::Storage::Streams::IBuffer ^ buffer)
 {
     Microsoft::WRL::ComPtr<IInspectable> bufferInspectable(reinterpret_cast<IInspectable*>(buffer));
@@ -46,7 +52,21 @@ void winrt_secure_zero_buffer(Windows::Storage::Streams::IBuffer ^ buffer)
         SecureZeroMemory(rawBytes, buffer->Length);
     }
 }
+#else // C++/WinRT projection
+void winrt_secure_zero_buffer(winrt::Windows::Storage::Streams::IBuffer const& buffer)
+{
+    auto bufferByteAccess = buffer.as<Windows::Storage::Streams::IBufferByteAccess>();
+    // This shouldn't happen but if can't get access to the raw bytes for some reason
+    // then we can't zero out.
+    byte* rawBytes;
+    if (bufferByteAccess->Buffer(&rawBytes) == S_OK)
+    {
+        SecureZeroMemory(rawBytes, buffer.Length());
+    }
+}
+#endif
 
+#ifdef __cplusplus_winrt // C++/CX projection
 winrt_encryption::winrt_encryption(const std::wstring& data)
 {
     auto provider = ref new Windows::Security::Cryptography::DataProtection::DataProtectionProvider(
@@ -62,7 +82,24 @@ winrt_encryption::winrt_encryption(const std::wstring& data)
     m_buffer.then(
         [plaintext](pplx::task<Windows::Storage::Streams::IBuffer ^>) { winrt_secure_zero_buffer(plaintext); });
 }
+#else // C++/WinRT projection
+winrt_encryption::winrt_encryption(const std::wstring& data)
+{
+    auto provider = winrt::Windows::Security::Cryptography::DataProtection::DataProtectionProvider(L"Local=user");
+    // Create buffer containing plain text password.
+    winrt::Windows::Storage::Streams::IBuffer plaintext =
+        winrt::Windows::Security::Cryptography::CryptographicBuffer::CreateFromByteArray({
+            reinterpret_cast<unsigned char*>(const_cast<std::wstring::value_type*>(data.c_str())),
+            reinterpret_cast<unsigned char*>(const_cast<std::wstring::value_type*>(data.c_str()+data.size()))
+        });
+    m_buffer = [&]() -> pplx::task<winrt::Windows::Storage::Streams::IBuffer>
+    { co_return co_await provider.ProtectAsync(plaintext); }();
+    m_buffer.then([plaintext](pplx::task<winrt::Windows::Storage::Streams::IBuffer>)
+                  { winrt_secure_zero_buffer(plaintext); });
+}
+#endif
 
+#ifdef __cplusplus_winrt // C++/CX projection
 plaintext_string winrt_encryption::decrypt() const
 {
     // To fully guarantee asynchrony would require significant impact on existing code. This code path
@@ -88,8 +125,35 @@ plaintext_string winrt_encryption::decrypt() const
     SecureZeroMemory(rawPlaintext, plaintext->Length);
     return std::move(data);
 }
+#else // C++/WinRT projection
+plaintext_string winrt_encryption::decrypt() const
+{
+    // To fully guarantee asynchrony would require significant impact on existing code. This code path
+    // is never run on a user's thread and is only done once when setting up a connection.
+    auto encrypted = m_buffer.get();
+    auto provider = winrt::Windows::Security::Cryptography::DataProtection::DataProtectionProvider();
+    auto plaintext = [&]() -> pplx::task<winrt::Windows::Storage::Streams::IBuffer>
+    { co_return co_await provider.UnprotectAsync(encrypted); }().get();
 
-#else  // ^^^ __cplusplus_winrt ^^^ // vvv !__cplusplus_winrt vvv
+    // Get access to raw bytes in plain text buffer.
+    auto bufferByteAccess = plaintext.as<Windows::Storage::Streams::IBufferByteAccess>();
+
+    byte* rawPlaintext;
+    const auto& result = bufferByteAccess->Buffer(&rawPlaintext);
+    if (result != S_OK)
+    {
+        throw ::utility::details::create_system_error(result);
+    }
+
+    // Construct string and zero out memory from plain text buffer.
+    auto data = plaintext_string(
+        new std::wstring(reinterpret_cast<const std::wstring::value_type*>(rawPlaintext), plaintext.Length() / 2));
+    SecureZeroMemory(rawPlaintext, plaintext.Length());
+    return std::move(data);
+}
+#endif
+
+#else  // ^^^ CPPREST_WINRT ^^^ // vvv !CPPREST_WINRT vvv
 
 win32_encryption::win32_encryption(const std::wstring& data) : m_numCharacters(data.size())
 {
@@ -142,7 +206,7 @@ plaintext_string win32_encryption::decrypt() const
 
     return result;
 }
-#endif // __cplusplus_winrt
+#endif // CPPREST_WINRT
 #endif // _WIN32_WINNT >= _WIN32_WINNT_VISTA
 #endif // _WIN32
 

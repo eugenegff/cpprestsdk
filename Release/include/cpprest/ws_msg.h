@@ -58,7 +58,7 @@ enum class websocket_message_type
 class websocket_outgoing_message
 {
 public:
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     /// <summary>
     /// Sets the outgoing message to be a ping message.
     /// This is useful when the client side wants to check whether the server is alive.
@@ -152,7 +152,7 @@ private:
 
     const pplx::task_completion_event<void>& body_sent() const { return m_body_sent; }
 
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     void set_message_ping(const concurrency::streams::container_buffer<std::string>& buffer)
     {
         m_msg_type = websocket_message_type::ping;

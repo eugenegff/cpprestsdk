@@ -28,7 +28,7 @@
 #include <memory>
 #include <mutex>
 
-#if !defined(_WIN32) || !defined(__cplusplus_winrt)
+#if !defined(_WIN32) || !defined(CPPREST_WINRT)
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wconversion"
@@ -179,7 +179,7 @@ public:
     /// caution.</remarks>
     void set_validate_certificates(bool validate_certs) { m_validate_certificates = validate_certs; }
 
-#if !defined(_WIN32) || !defined(__cplusplus_winrt)
+#if !defined(_WIN32) || !defined(CPPREST_WINRT)
     /// <summary>
     /// Sets a callback to enable custom setting of the ssl context, at construction time.
     /// </summary>
@@ -206,7 +206,7 @@ private:
     bool m_sni_enabled;
     utf8string m_sni_hostname;
     bool m_validate_certificates;
-#if !defined(_WIN32) || !defined(__cplusplus_winrt)
+#if !defined(_WIN32) || !defined(CPPREST_WINRT)
     std::function<void(asio::ssl::context&)> m_ssl_context_callback;
 #endif
 };

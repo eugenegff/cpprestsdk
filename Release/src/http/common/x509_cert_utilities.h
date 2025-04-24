@@ -63,7 +63,7 @@ struct winhttp_cert_chain_context
 
 #if defined(__APPLE__) || (defined(ANDROID) || defined(__ANDROID__)) ||                                                \
     (defined(_WIN32) && defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)) ||                                                    \
-    (defined(_WIN32) && !defined(__cplusplus_winrt) && !defined(_M_ARM) && !defined(CPPREST_EXCLUDE_WEBSOCKETS))
+    (defined(_WIN32) && !defined(CPPREST_WINRT) && !defined(_M_ARM) && !defined(CPPREST_EXCLUDE_WEBSOCKETS))
 #define CPPREST_PLATFORM_ASIO_CERT_VERIFICATION_AVAILABLE
 #endif
 

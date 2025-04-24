@@ -13,6 +13,10 @@
 #include "cpprest/asyncrt_utils.h"
 #include "cpprest/uri.h"
 
+#if defined CPPREST_WINRT && !defined __cplusplus_winrt // C++/WinRT projection
+#include <winrt/Windows.Storage.Streams.h>
+#endif
+
 namespace web
 {
 namespace details
@@ -26,7 +30,7 @@ typedef std::unique_ptr<::utility::string_t, zero_memory_deleter> plaintext_stri
 
 #ifdef _WIN32
 #if _WIN32_WINNT >= _WIN32_WINNT_VISTA
-#ifdef __cplusplus_winrt
+#ifdef CPPREST_WINRT
 class winrt_encryption
 {
 public:
@@ -35,9 +39,13 @@ public:
     _ASYNCRTIMP plaintext_string decrypt() const;
 
 private:
+#ifdef __cplusplus_winrt // C++/CX projection
     ::pplx::task<Windows::Storage::Streams::IBuffer ^> m_buffer;
+#else // C++/WinRT projection
+    ::pplx::task<winrt::Windows::Storage::Streams::IBuffer> m_buffer;
+#endif
 };
-#else  // ^^^ __cplusplus_winrt ^^^ // vvv !__cplusplus_winrt vvv
+#else  // ^^^ CPPREST_WINRT ^^^ // vvv !CPPREST_WINRT vvv
 class win32_encryption
 {
 public:
@@ -50,7 +58,7 @@ private:
     std::vector<char> m_buffer;
     size_t m_numCharacters;
 };
-#endif // __cplusplus_winrt
+#endif // CPPREST_WINRT
 #endif // _WIN32_WINNT >= _WIN32_WINNT_VISTA
 #endif // _WIN32
 } // namespace details
@@ -118,7 +126,7 @@ private:
     ::utility::string_t m_username;
 
 #if defined(_WIN32) && _WIN32_WINNT >= _WIN32_WINNT_VISTA
-#if defined(__cplusplus_winrt)
+#if defined(CPPREST_WINRT)
     details::winrt_encryption m_password;
 #else
     details::win32_encryption m_password;

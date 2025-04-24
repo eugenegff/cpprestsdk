@@ -494,7 +494,7 @@ private:
     details::basic_async_streambuf<CharType> m_strbuf;
 };
 
-#if defined(__cplusplus_winrt)
+#if defined(CPPREST_WINRT)
 
 /// <summary>
 /// Static class containing factory functions for WinRT streams implemented on top of Casablanca async streams.
@@ -513,7 +513,11 @@ public:
     /// The stream buffer is shared with the caller, allowing data to be passed between the two contexts. For
     /// example, using a <c>producer_consumer_buffer</c>, a Casablanca-based caller can pass data to a WinRT component.
     /// </remarks>
+#ifdef __cplusplus_winrt // C++/CX projection
     _ASYNCRTIMP static Windows::Storage::Streams::IInputStream ^
+#else // C++/WinRT projection
+    _ASYNCRTIMP static ::winrt::Windows::Storage::Streams::IInputStream
+#endif
         __cdecl create_input_stream(const concurrency::streams::streambuf<uint8_t>& buffer);
 
     /// <summary>
@@ -527,7 +531,11 @@ public:
     /// example, using a <c>producer_consumer_buffer</c>, a Casablanca-based caller can retrieve data from a WinRT
     /// component.
     /// </remarks>
+#ifdef __cplusplus_winrt // C++/CX projection
     _ASYNCRTIMP static Windows::Storage::Streams::IOutputStream ^
+#else // C++/WinRT projection
+    _ASYNCRTIMP static ::winrt::Windows::Storage::Streams::IOutputStream
+#endif
         __cdecl create_output_stream(const concurrency::streams::streambuf<uint8_t>& buffer);
 
     /// <summary>
@@ -540,7 +548,11 @@ public:
     /// example, using a <c>producer_consumer_buffer</c>, a Casablanca-based caller can pass data to and retrieve data
     /// from a WinRT component.
     /// </remarks>
+#ifdef __cplusplus_winrt // C++/CX projection
     _ASYNCRTIMP static Windows::Storage::Streams::IRandomAccessStream ^
+#else // C++/WinRT projection
+    _ASYNCRTIMP static ::winrt::Windows::Storage::Streams::IRandomAccessStream
+#endif
         __cdecl create_random_access_stream(const concurrency::streams::streambuf<uint8_t>& buffer);
 };
 
