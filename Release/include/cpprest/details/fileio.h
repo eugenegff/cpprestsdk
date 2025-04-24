@@ -104,7 +104,7 @@ extern "C"
 /// <remarks>
 /// True does not signal that the file will eventually be successfully opened, just that the process was started.
 /// </remarks>
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     _ASYNCRTIMP bool __cdecl _open_fsb_str(_In_ concurrency::streams::details::_filestream_callback* callback,
                                            const utility::char_t* filename,
                                            std::ios_base::openmode mode,
@@ -122,9 +122,13 @@ extern "C"
 /// True does not signal that the file will eventually be successfully opened, just that the process was started.
 /// This is only available for WinRT.
 /// </remarks>
-#if defined(__cplusplus_winrt)
+#if defined(CPPREST_WINRT)
     _ASYNCRTIMP bool __cdecl _open_fsb_stf_str(_In_ concurrency::streams::details::_filestream_callback* callback,
+#ifdef __cplusplus_winrt // C++/CX projection
                                                ::Windows::Storage::StorageFile ^ file,
+#else // C++/WinRT projection
+                                               ::winrt::Windows::Storage::StorageFile const& file,
+#endif
                                                std::ios_base::openmode mode,
                                                int prot);
 #endif

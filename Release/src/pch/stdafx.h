@@ -27,7 +27,9 @@
 #endif // _DEBUG
 
 #include <SDKDDKVer.h>
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
+#endif
 
 #if CPPREST_TARGET_XP && _WIN32_WINNT != 0x0501
 #error CPPREST_TARGET_XP implies _WIN32_WINNT == 0x0501
@@ -37,10 +39,14 @@
 
 #include <windows.h>
 
+#if defined(WINAPI_FAMILY) && defined(WINAPI_FAMILY_APP) && WINAPI_FAMILY == WINAPI_FAMILY_APP
+#define CPPREST_WINRT // Windows Store Application, C++/CX or C++/WinRT
+#endif
+
 // Windows Header Files:
-#ifndef __cplusplus_winrt
+#ifndef CPPREST_WINRT
 #include <winhttp.h>
-#endif // !__cplusplus_winrt
+#endif // !CPPREST_WINRT
 
 #else // LINUX or APPLE
 #define __STDC_LIMIT_MACROS
@@ -96,7 +102,7 @@
 #endif
 #include "cpprest/oauth2.h"
 
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
 #if _WIN32_WINNT >= _WIN32_WINNT_VISTA
 #include "cpprest/details/http_server.h"
 #include "cpprest/details/http_server_api.h"

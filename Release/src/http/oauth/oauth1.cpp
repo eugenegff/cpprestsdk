@@ -17,6 +17,12 @@
 
 #if _WIN32_WINNT >= _WIN32_WINNT_VISTA
 
+#if defined CPPREST_WINRT && !defined __cplusplus_winrt // C++/WinRT projection
+#include <winrt/Windows.Security.Cryptography.h>
+#include <winrt/Windows.Security.Cryptography.Core.h>
+#include <winrt/Windows.Storage.Streams.h>
+#endif
+
 using namespace utility;
 using web::http::client::http_client;
 using web::http::client::http_client_config;
@@ -44,7 +50,7 @@ namespace experimental
 //
 // Start of platform-dependent _hmac_sha1() block...
 //
-#if defined(_WIN32) && !defined(__cplusplus_winrt) // Windows desktop
+#if defined(_WIN32) && !defined(CPPREST_WINRT) // Windows desktop
 
 #include <bcrypt.h>
 #include <winternl.h>
@@ -107,7 +113,7 @@ cleanup:
 }
 #pragma warning(pop)
 
-#elif defined(_WIN32) && defined(__cplusplus_winrt) // Windows RT
+#elif defined(_WIN32) && defined(CPPREST_WINRT) && defined(__cplusplus_winrt) // Windows RT, C++/CX projection
 
 using namespace Windows::Security::Cryptography;
 using namespace Windows::Security::Cryptography::Core;
@@ -128,6 +134,26 @@ std::vector<unsigned char> oauth1_config::_hmac_sha1(const utility::string_t& ke
     Platform::Array<unsigned char, 1> ^ arr;
     CryptographicBuffer::CopyToByteArray(signed_buffer, &arr);
     return std::vector<unsigned char>(arr->Data, arr->Data + arr->Length);
+}
+
+#elif defined(_WIN32) && defined(CPPREST_WINRT) && !defined(__cplusplus_winrt) // Windows RT, C++/WinRT projection
+
+using namespace winrt::Windows::Security::Cryptography;
+using namespace winrt::Windows::Security::Cryptography::Core;
+using namespace winrt::Windows::Storage::Streams;
+
+std::vector<unsigned char> oauth1_config::_hmac_sha1(const utility::string_t& key, const utility::string_t& data)
+{
+    MacAlgorithmProvider HMACSha1Provider = MacAlgorithmProvider::OpenAlgorithm(MacAlgorithmNames::HmacSha1());
+    IBuffer content_buffer = CryptographicBuffer::ConvertStringToBinary(data, BinaryStringEncoding::Utf8);
+    IBuffer key_buffer = CryptographicBuffer::ConvertStringToBinary(key, BinaryStringEncoding::Utf8);
+
+    auto signature_key = HMACSha1Provider.CreateKey(key_buffer);
+    auto signed_buffer = CryptographicEngine::Sign(signature_key, content_buffer);
+
+    winrt::com_array<unsigned char> arr;
+    CryptographicBuffer::CopyToByteArray(signed_buffer, arr);
+    return std::vector<unsigned char>(arr.data(), arr.data() + arr.size());
 }
 
 #else // Linux, Mac OS X

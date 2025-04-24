@@ -24,7 +24,9 @@
 #include <msxml6.h>
 #include <wrl.h>
 using namespace std;
+#if defined(__cplusplus_winrt) // C++/CX projection
 using namespace Platform;
+#endif
 using namespace Microsoft::WRL;
 
 namespace web

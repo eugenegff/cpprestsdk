@@ -2,8 +2,9 @@
 Support PPLX and C++ REST SDK for [Live Home 3D](https://www.livehome3d.com) needs on all major platforms (Win, macOS, iOS, Android), till C++26 hopefully give us std::execution::then()
 ### Changes:
 * Modernized to use Standalone Asio 1.32 (2024) rather than obsolete Boost.Asio 1.12 (2018). Asio is used for PPLX threadpool and networking on non Windows platforms
+* Supported Windows UWP C++/WinRT projection, in addition to C++/CX. \#define CPPREST_WINRT is defined for both Windows UWP projections, \_\_cplusplus\_winrt only for C++/CX
 ### Plans:
-* Support Windows UWP C++/WinRT and WinUI3 C++/WinRT, in addition to currently supported Win32 and Windows UWP C++/CX
+* Support WinUI3 C++/WinRT projection, \#if !defined CPPREST_WINRT \&\& defined CPPWINRT_VERSION - or should we continue to use Win32 mode?
 
 ## Welcome!
 

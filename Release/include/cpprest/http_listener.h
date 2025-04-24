@@ -16,11 +16,11 @@
 #include "cpprest/http_msg.h"
 #include <functional>
 #include <limits>
-#if !defined(_WIN32) && !defined(__cplusplus_winrt) || defined(CPPREST_FORCE_HTTP_LISTENER_ASIO)
+#if !defined(_WIN32) && !defined(CPPREST_WINRT) || defined(CPPREST_FORCE_HTTP_LISTENER_ASIO)
 #include <asio/ssl.hpp>
 #endif
 
-#if !defined(_WIN32) || (_WIN32_WINNT >= _WIN32_WINNT_VISTA && !defined(__cplusplus_winrt)) ||                         \
+#if !defined(_WIN32) || (_WIN32_WINNT >= _WIN32_WINNT_VISTA && !defined(CPPREST_WINRT)) ||                         \
     defined(CPPREST_FORCE_HTTP_LISTENER_ASIO)
 
 namespace web

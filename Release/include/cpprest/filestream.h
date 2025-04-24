@@ -710,7 +710,7 @@ private:
 
     basic_file_buffer(_In_ _file_info* info) : streambuf_state_manager<_CharType>(info->m_mode), m_info(info) {}
 
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     static pplx::task<std::shared_ptr<basic_streambuf<_CharType>>> open(
         const utility::string_t& _Filename,
         std::ios_base::openmode _Mode = std::ios_base::out,
@@ -729,7 +729,12 @@ private:
 
 #else
     static pplx::task<std::shared_ptr<basic_streambuf<_CharType>>> open(
-        ::Windows::Storage::StorageFile ^ file, std::ios_base::openmode _Mode = std::ios_base::out)
+#ifdef __cplusplus_winrt // C++/CX projection
+        ::Windows::Storage::StorageFile ^ file,
+#else // C++/WinRT projection
+        ::winrt::Windows::Storage::StorageFile const& file,
+#endif
+        std::ios_base::openmode _Mode = std::ios_base::out)
     {
         auto result_tce = pplx::task_completion_event<std::shared_ptr<basic_streambuf<_CharType>>>();
         auto callback = new _filestream_callback_open(result_tce);
@@ -946,7 +951,7 @@ template<typename _CharType>
 class file_buffer
 {
 public:
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     /// <summary>
     /// Open a new stream buffer representing the given file.
     /// </summary>
@@ -978,8 +983,13 @@ public:
     /// <param name="mode">The opening mode of the file</param>
     /// <param name="prot">The file protection mode</param>
     /// <returns>A <c>task</c> that returns an opened stream buffer on completion.</returns>
-    static pplx::task<streambuf<_CharType>> open(::Windows::Storage::StorageFile ^ file,
-                                                 std::ios_base::openmode mode = std::ios_base::out)
+    static pplx::task<streambuf<_CharType>> open(
+#ifdef __cplusplus_winrt // C++/CX projection
+        ::Windows::Storage::StorageFile ^ file,
+#else // C++/WinRT projection
+        ::winrt::Windows::Storage::StorageFile const& file,
+#endif
+        std::ios_base::openmode mode = std::ios_base::out)
     {
         auto bfb = details::basic_file_buffer<_CharType>::open(file, mode);
         return bfb.then(
@@ -1000,7 +1010,7 @@ template<typename _CharType>
 class file_stream
 {
 public:
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     /// <summary>
     /// Open a new input stream representing the given file.
     /// The file should already exist on disk, or an exception will be thrown.
@@ -1057,8 +1067,13 @@ public:
     /// <param name="file">The StorageFile reference representing the file</param>
     /// <param name="mode">The opening mode of the file</param>
     /// <returns>A <c>task</c> that returns an opened input stream on completion.</returns>
-    static pplx::task<streams::basic_istream<_CharType>> open_istream(::Windows::Storage::StorageFile ^ file,
-                                                                      std::ios_base::openmode mode = std::ios_base::in)
+    static pplx::task<streams::basic_istream<_CharType>> open_istream(
+#ifdef __cplusplus_winrt // C++/CX projection
+        ::Windows::Storage::StorageFile ^ file,
+#else // C++/WinRT projection
+        ::winrt::Windows::Storage::StorageFile const& file,
+#endif
+        std::ios_base::openmode mode = std::ios_base::in)
     {
         mode |= std::ios_base::in;
         return streams::file_buffer<_CharType>::open(file, mode)

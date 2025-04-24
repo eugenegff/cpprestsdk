@@ -15,7 +15,9 @@
 #ifndef CASA_HTTP_CLIENT_H
 #define CASA_HTTP_CLIENT_H
 
-#if defined(__cplusplus_winrt)
+#include "cpprest/details/cpprest_compat.h"
+
+#if defined(CPPREST_WINRT)
 #if !defined(__WRL_NO_DEFAULT_LIB__)
 #define __WRL_NO_DEFAULT_LIB__
 #endif
@@ -42,7 +44,7 @@ typedef void* native_handle;
 }
 } // namespace http
 } // namespace web
-#endif // __cplusplus_winrt
+#endif // CPPREST_WINRT
 
 #include "cpprest/asyncrt_utils.h"
 #include "cpprest/details/basic_types.h"
@@ -60,7 +62,7 @@ typedef void* native_handle;
 
 #include "cpprest/oauth2.h"
 
-#if !defined(_WIN32) && !defined(__cplusplus_winrt) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
+#if !defined(_WIN32) && !defined(CPPREST_WINRT) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wconversion"
@@ -98,13 +100,13 @@ public:
         , m_timeout(std::chrono::seconds(30))
         , m_chunksize(0)
         , m_request_compressed(false)
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
         , m_validate_certificates(true)
 #endif
-#if !defined(_WIN32) && !defined(__cplusplus_winrt) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
+#if !defined(_WIN32) && !defined(CPPREST_WINRT) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
         , m_tlsext_sni_enabled(true)
 #endif
-#if (defined(_WIN32) && !defined(__cplusplus_winrt)) || defined(CPPREST_FORCE_HTTP_CLIENT_WINHTTPPAL)
+#if (defined(_WIN32) && !defined(CPPREST_WINRT)) || defined(CPPREST_FORCE_HTTP_CLIENT_WINHTTPPAL)
         , m_buffer_request(false)
 #endif
         , m_max_redirects(10)
@@ -248,7 +250,7 @@ public:
     /// only supported on Windows and OSX.</remarks>
     void set_request_compressed_response(bool request_compressed) { m_request_compressed = request_compressed; }
 
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     /// <summary>
     /// Gets the server certificate validation property.
     /// </summary>
@@ -264,7 +266,7 @@ public:
     void set_validate_certificates(bool validate_certs) { m_validate_certificates = validate_certs; }
 #endif
 
-#if (defined(_WIN32) && !defined(__cplusplus_winrt)) || defined(CPPREST_FORCE_HTTP_CLIENT_WINHTTPPAL)
+#if (defined(_WIN32) && !defined(CPPREST_WINRT)) || defined(CPPREST_FORCE_HTTP_CLIENT_WINHTTPPAL)
     /// <summary>
     /// Checks if request data buffering is turned on, the default is off.
     /// </summary>
@@ -362,7 +364,7 @@ public:
         if (m_set_user_nativehandle_options) m_set_user_nativehandle_options(handle);
     }
 
-#if !defined(_WIN32) && !defined(__cplusplus_winrt) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
+#if !defined(_WIN32) && !defined(CPPREST_WINRT) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
     /// <summary>
     /// Sets a callback to enable custom setting of the ssl context, at construction time.
     /// </summary>
@@ -411,7 +413,7 @@ private:
     size_t m_chunksize;
     bool m_request_compressed;
 
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     // IXmlHttpRequest2 doesn't allow configuration of certificate verification.
     bool m_validate_certificates;
 #endif
@@ -419,11 +421,11 @@ private:
     std::function<void(native_handle)> m_set_user_nativehandle_options;
     std::function<void(native_handle)> m_set_user_nativesessionhandle_options;
 
-#if !defined(_WIN32) && !defined(__cplusplus_winrt) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
+#if !defined(_WIN32) && !defined(CPPREST_WINRT) || defined(CPPREST_FORCE_HTTP_CLIENT_ASIO)
     std::function<void(asio::ssl::context&)> m_ssl_context_callback;
     bool m_tlsext_sni_enabled;
 #endif
-#if (defined(_WIN32) && !defined(__cplusplus_winrt)) || defined(CPPREST_FORCE_HTTP_CLIENT_WINHTTPPAL)
+#if (defined(_WIN32) && !defined(CPPREST_WINRT)) || defined(CPPREST_FORCE_HTTP_CLIENT_WINHTTPPAL)
     bool m_buffer_request;
 #endif
 
@@ -667,7 +669,7 @@ public:
             mtd, path_query_fragment, body_data, ::utility::conversions::to_utf16string("text/plain"), token);
     }
 
-#if !defined(__cplusplus_winrt)
+#if !defined(CPPREST_WINRT)
     /// <summary>
     /// Asynchronously sends an HTTP request.
     /// </summary>
@@ -704,7 +706,7 @@ public:
     {
         return request(mtd, path_query_fragment, body, _XPLATSTR("application/octet-stream"), token);
     }
-#endif // __cplusplus_winrt
+#endif // CPPREST_WINRT
 
     /// <summary>
     /// Asynchronously sends an HTTP request.
