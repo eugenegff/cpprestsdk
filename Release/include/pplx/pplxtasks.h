@@ -840,11 +840,35 @@ public:
 template<typename _Type>
 struct _ResultHolder
 {
+    _ResultHolder() = default;
+
     void Set(const _Type& _type) { _Result = _type; }
 
     _Type Get() { return _Result; }
 
     _Type _Result;
+};
+
+// Special implementation of vector<bool> in STL will cause
+// race condition when multiple threads write to the result
+template<>
+struct _ResultHolder<::std::vector<bool>>
+{
+    void Set(const ::std::vector<bool>& _type)
+    {
+        _Result.resize(_type.size());
+        ::std::transform(
+            _type.begin(), _type.end(), _Result.begin(), [](bool _Val) { return static_cast<char>(_Val); });
+    }
+
+    ::std::vector<bool> Get()
+    {
+        ::std::vector<bool> _Ret(_Result.size());
+        ::std::transform(_Result.begin(), _Result.end(), _Ret.begin(), [](char _Val) { return _Val != 0; });
+        return _Ret;
+    }
+
+    ::std::vector<char> _Result;
 };
 
 #if defined(__cplusplus_winrt)
@@ -2743,10 +2767,7 @@ public:
                     (*_TaskIt)->_FinalizeAndRunContinuations(_M_Impl->_M_value.Get());
                 }
             }
-            if (_M_Impl->_HasUserException())
-            {
-                _M_Impl->_M_exceptionHolder.reset();
-            }
+
             return true;
         }
 
@@ -2830,6 +2851,19 @@ public:
             return true;
         }
         return false;
+    }
+    /// <summary>
+    ///     Internal method that observe and clear the exception stored in the task completion event.
+    ///     This is used internally by when_any.
+    /// </summary>
+    void _ClearStoredException() const
+    {
+        ::pplx::extensibility::scoped_critical_section_t _LockHolder(_M_Impl->_M_taskListCritSec);
+        if (_M_Impl->_M_exceptionHolder)
+        {
+            details::atomic_exchange(_M_Impl->_M_exceptionHolder->_M_exceptionObserved, 1l);
+            _M_Impl->_M_exceptionHolder.reset();
+        }
     }
 
     /// <summary>
@@ -3017,6 +3051,15 @@ public:
     bool _StoreException(const std::shared_ptr<details::_ExceptionHolder>& _ExHolder) const
     {
         return _M_unitEvent._StoreException(_ExHolder);
+    }
+
+    /// <summary>
+    ///     Internal method that observe and clear the exception stored in the task completion event.
+    ///     This is used internally by when_any.
+    /// </summary>
+    void _ClearStoredException() const
+    {
+        _M_unitEvent._ClearStoredException();
     }
 
     /// <summary>
@@ -6527,7 +6570,8 @@ template<typename _Function>
         if (_Task._GetImpl()->_IsCompleted())
         {
             _Func();
-            if (atomic_increment(_PParam->_M_completeCount) == _PParam->_M_numTasks)
+            const auto _NumTasks = _PParam->_M_numTasks; // must read before atomic_increment(), see VSO-2326552
+            if (atomic_increment(_PParam->_M_completeCount) == _NumTasks)
             {
                 // Inline execute its direct continuation, the _ReturnTask
                 _PParam->_M_completed.set(_Unit_type());
@@ -6541,14 +6585,18 @@ template<typename _Function>
             if (_Task._GetImpl()->_HasUserException())
             {
                 // _Cancel will return false if the TCE is already canceled with or without exception
-                _PParam->_M_completed._Cancel(_Task._GetImpl()->_GetExceptionHolder());
+                if (!_PParam->_M_completed._Cancel(_Task._GetImpl()->_GetExceptionHolder()))
+                {
+                    atomic_exchange(_Task._GetImpl()->_GetExceptionHolder()->_M_exceptionObserved, 1l);
+                }
             }
             else
             {
                 _PParam->_M_completed._Cancel();
             }
 
-            if (atomic_increment(_PParam->_M_completeCount) == _PParam->_M_numTasks)
+            const auto _NumTasks = _PParam->_M_numTasks; // must read before atomic_increment(), see VSO-2326552
+            if (atomic_increment(_PParam->_M_completeCount) == _NumTasks)
             {
                 delete _PParam;
             }
@@ -7047,17 +7095,19 @@ void _WhenAnyContinuationWrapper(_RunAnyParam<_CompletionType>* _PParam, const _
     if (_Task._GetImpl()->_IsCompleted() && !_IsTokenCancled)
     {
         _Func();
-        if (atomic_increment(_PParam->_M_completeCount) == _PParam->_M_numTasks)
+        const auto _NumTasks = _PParam->_M_numTasks; // must read before atomic_increment(), see VSO-2326552
+        if (atomic_increment(_PParam->_M_completeCount) == _NumTasks)
         {
+            _PParam->_M_Completed._ClearStoredException();
             delete _PParam;
         }
     }
     else
     {
         _ASSERTE(_Task._GetImpl()->_IsCanceled() || _IsTokenCancled);
-        if (_Task._GetImpl()->_HasUserException() && !_IsTokenCancled)
+        if (_Task._GetImpl()->_HasUserException())
         {
-            if (_PParam->_M_Completed._StoreException(_Task._GetImpl()->_GetExceptionHolder()))
+            if (!_IsTokenCancled && _PParam->_M_Completed._StoreException(_Task._GetImpl()->_GetExceptionHolder()))
             {
                 // This can only enter once.
                 _PParam->_M_exceptionRelatedToken = _Task._GetImpl()->_M_pTokenState;
@@ -7068,9 +7118,15 @@ void _WhenAnyContinuationWrapper(_RunAnyParam<_CompletionType>* _PParam, const _
                     _PParam->_M_exceptionRelatedToken->_Reference();
                 }
             }
+            else
+            {
+                // Observe exceptions that not picked
+                atomic_exchange(_Task._GetImpl()->_GetExceptionHolder()->_M_exceptionObserved, 1l);
+            }
         }
 
-        if (atomic_increment(_PParam->_M_completeCount) == _PParam->_M_numTasks)
+        const auto _NumTasks = _PParam->_M_numTasks; // must read before atomic_increment(), see VSO-2326552
+        if (atomic_increment(_PParam->_M_completeCount) == _NumTasks)
         {
             // If no one has be completed so far, we need to make some final cancellation decision.
             if (!_PParam->_M_Completed._IsTriggered())
@@ -7092,6 +7148,8 @@ void _WhenAnyContinuationWrapper(_RunAnyParam<_CompletionType>* _PParam, const _
                 // Do exception cancellation or normal cancellation based on whether it has stored exception.
                 _PParam->_M_Completed._Cancel();
             }
+            else
+                _PParam->_M_Completed._ClearStoredException();
             delete _PParam;
         }
     }
